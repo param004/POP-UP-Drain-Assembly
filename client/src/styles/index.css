@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens for the Premier Products® storefront.
+ * Palette and type scale come straight from the reference: off-white grounds,
+ * near-black ink, chrome/brass reserved for the 3D renders, and a single warm
+ * accent (brass) used sparingly on icons and focus states.
+ */
+@theme {
+  --color-shell-50: #fafaf9;
+  --color-shell-100: #f4f4f2;
+  --color-shell-200: #e9e9e7;
+  --color-shell-300: #dcdcd9;
+  --color-ink-900: #111111;
+  --color-ink-800: #1e1e1e;
+  --color-ink-700: #2a2a2a;
+  --color-ink-500: #6b6b6b;
+  --color-ink-400: #8f8f8f;
+  --color-brass-500: #b3542b;
+  --color-brass-400: #c96f45;
+  --color-brass-300: #dd9a76;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* The sticky header must not cover an anchored heading. */
+    scroll-padding-top: 5.5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-shell-100);
+    color: var(--color-ink-900);
+    font-family: var(--font-sans);
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Respect users who ask for less motion: kill scroll-smooth and every
+     keyframe animation, but keep opacity/transform transitions so nothing
+     becomes invisible or unusable. */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ink-900);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: var(--color-ink-900);
+    color: var(--color-shell-100);
+  }
+}
+
+@layer components {
+  /* Bold, tight-tracked uppercase display type used for all headings. */
+  .display {
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 0.95;
+    text-transform: uppercase;
+  }
+
+  .eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-ink-500);
+  }
+
+  /* Very fine film grain. Sits above the page, ignores pointer events, and is
+     kept extremely subtle so it reads as paper rather than noise. */
+  .grain::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Vertical writing mode, used by the desktop explode slider's label. */
+  .writing-vertical {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+  }
+}
+
+/* Hide the number input spinners on quantity fields. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

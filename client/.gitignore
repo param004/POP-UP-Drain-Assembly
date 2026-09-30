@@ -1,0 +1,17 @@
+# The client build output. Regenerate with `npm run build`.
+dist/
+
+# Vite / tooling caches
+.vite/
+node_modules/.vite/
+
+# Local env overrides. VITE_* values are baked into the bundle at build time,
+# so treat them as committed or secret deliberately — never put a real key here.
+.env
+.env.*
+!.env.example
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp

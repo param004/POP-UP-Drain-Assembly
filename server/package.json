@@ -1,0 +1,33 @@
+{
+  "name": "pop-up-drain-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "REST API for the Premier Products® Drain Assembly storefront",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node seed/seed.js",
+    "build": "esbuild server.js --bundle --platform=node --target=node22 --format=cjs --outfile=dist/server.cjs && esbuild seed/seed.js --bundle --platform=node --target=node22 --format=cjs --outfile=dist/seed.cjs",
+    "serve:bundle": "node dist/server.cjs",
+    "seed:bundle": "node dist/seed.cjs"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "compression": "^1.8.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.20.1",
+    "morgan": "^1.10.1",
+    "nodemailer": "^7.0.10"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

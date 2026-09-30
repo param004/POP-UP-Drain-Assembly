@@ -1,0 +1,104 @@
+import { useQuery } from "@tanstack/react-query";
+
+import { fetchProduct, fetchProducts } from "../api/endpoints.js";
+import Hero from "../components/home/Hero.jsx";
+import ScrollStory from "../components/home/ScrollStory.jsx";
+import FeatureBreakdown from "../components/home/FeatureBreakdown.jsx";
+import ProductCard from "../components/product/ProductCard.jsx";
+import Reveal from "../components/ui/Reveal.jsx";
+import Button from "../components/ui/Button.jsx";
+import { ErrorState, Skeleton } from "../components/ui/Feedback.jsx";
+import { SHOP_PATH } from "../data/paths.js";
+
+const SLUG = "pop-up-drain-assembly";
+
+export default function Home() {
+  // The hero, the explorer and the product grid all describe the same product,
+  // so it is fetched once and shared across the page.
+  const { data: product, isLoading, error, refetch } = useQuery({
+    queryKey: ["product", SLUG],
+    queryFn: () => fetchProduct(SLUG),
+    staleTime: 5 * 60_000,
+  });
+
+  const { data: related } = useQuery({
+    queryKey: ["products", { limit: 3, exclude: SLUG }],
+    queryFn: () => fetchProducts({ limit: 3, sort: "rating" }),
+    staleTime: 5 * 60_000,
+  });
+
+  const others = (related?.items ?? []).filter((p) => p.slug !== SLUG).slice(0, 3);
+
+  return (
+    <>
+      {isLoading && (
+        <div className="grid min-h-[100svh] place-items-center pt-16">
+          <Skeleton className="h-[60vh] w-full max-w-3xl rounded-xl" />
+        </div>
+      )}
+
+      {error && (
+        <div className="grid min-h-[80svh] place-items-center px-5 pt-24">
+          <ErrorState message={error.message} onRetry={refetch} />
+        </div>
+      )}
+
+      {product && (
+        <>
+          <Hero product={product} />
+
+          {/* ------------------------- interactive explorer ------------------------ */}
+          <section id="explorer" className="border-t border-shell-300">
+            {/* The sticky stage below pins itself, so the heading lives outside the
+                scroll spacer to avoid being pinned along with the 3D. */}
+            <div className="mx-auto max-w-[1400px] px-5 pb-10 pt-20 sm:px-8 sm:pb-14 sm:pt-28">
+              <Reveal>
+                <p className="eyebrow">explore</p>
+                <h2 className="display mt-3 max-w-2xl text-[clamp(1.75rem,4vw,3rem)]">
+                  Take it apart.
+                </h2>
+                <p className="mt-4 max-w-lg text-sm leading-relaxed text-ink-500">
+                  Scroll, and we&apos;ll take the assembly apart one part at a time — what each
+                  piece does, and what it&apos;s made of.
+                </p>
+              </Reveal>
+            </div>
+
+            <ScrollStory product={product} />
+          </section>
+
+          <FeatureBreakdown />
+
+          {/* ------------------------------ related ------------------------------ */}
+          {others.length > 0 && (
+            <section className="border-t border-shell-300">
+              <div className="mx-auto max-w-[1400px] px-5 py-20 sm:px-8 sm:py-28">
+                <Reveal>
+                  <div className="flex flex-wrap items-end justify-between gap-6">
+                    <div>
+                      <p className="eyebrow">the rest of the range</p>
+                      <h2 className="display mt-3 text-[clamp(1.75rem,4vw,3rem)]">
+                        Fits around it.
+                      </h2>
+                    </div>
+                    <Button to={SHOP_PATH} variant="outline" size="md" withArrow>
+                      All products
+                    </Button>
+                  </div>
+                </Reveal>
+
+                <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {others.map((p, i) => (
+                    <Reveal key={p._id} delay={i * 0.07}>
+                      <ProductCard product={p} index={i} />
+                    </Reveal>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+        </>
+      )}
+    </>
+  );
+}
