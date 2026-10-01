@@ -1,40 +1,29 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 
-import { fetchProduct } from "../api/endpoints.js";
-import { useCart } from "../context/CartContext.jsx";
-import { useWishlist } from "../context/WishlistContext.jsx";
+import { fetchProduct, fetchRelated } from "../api/endpoints.js";
 import ProductViewer from "../components/three/ProductViewer.jsx";
 import ScrollStory from "../components/home/ScrollStory.jsx";
 import ProductCard, { Stars } from "../components/product/ProductCard.jsx";
 import Button from "../components/ui/Button.jsx";
 import Reveal from "../components/ui/Reveal.jsx";
-import { ErrorState, Skeleton } from "../components/ui/Feedback.jsx";
+import { BUSINESS } from "../data/content.js";
 
 export default function ProductDetail() {
   const { slug } = useParams();
-  const navigate = useNavigate();
-  const { addItem, pendingItem } = useCart();
-  const { ids, toggle } = useWishlist();
 
   const [variantId, setVariantId] = useState(null);
-  const [qty, setQty] = useState(1);
-  const [added, setAdded] = useState(false);
-  const [error, setError] = useState(null);
 
-  const { data: product, isLoading, error: loadError, refetch } = useQuery({
-    queryKey: ["product", slug],
-    queryFn: () => fetchProduct(slug),
-  });
+  // Baked in at build time, so this is a lookup rather than a request: there is no
+  // loading branch to render and no fetch that can fail.
+  const product = fetchProduct(slug);
+  const related = useMemo(() => (product ? fetchRelated(product.slug, 3) : []), [product]);
 
-  // Reset the picker whenever the product changes, so state never leaks across
-  // a navigation from one product page to a related one.
+  // Reset the variant picker whenever the product changes, so state never leaks
+  // across a navigation from one product page to a related one.
   useEffect(() => {
     setVariantId(product?.variants?.[0]?._id ?? null);
-    setQty(1);
-    setError(null);
-  }, [product?._id, product]);
+  }, [product]);
 
   // Keep the tab title in step with the product for shareable links.
   useEffect(() => {
@@ -46,55 +35,10 @@ export default function ProductDetail() {
     };
   }, [product]);
 
-  if (isLoading) {
-    return (
-      <div className="pt-16 sm:pt-[4.5rem]">
-        <div className="mx-auto max-w-[1400px] px-5 py-14 sm:px-8 sm:py-20">
-          <div className="grid gap-12 lg:grid-cols-2">
-            <Skeleton className="aspect-square w-full rounded-xl" />
-            <div className="space-y-5">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-10 w-3/4" />
-              <Skeleton className="h-5 w-1/3" />
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-14 w-64 rounded-full" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <div className="grid min-h-[80svh] place-items-center px-5 pt-24">
-        <ErrorState message={loadError.message} onRetry={refetch} />
-      </div>
-    );
-  }
-
   if (!product) return null;
 
-  const wished = ids.has(String(product._id));
-  const busy = pendingItem === "new";
-  const inStock = product.stock > 0;
-  const maxQty = Math.max(1, product.stock);
-
-  const onAdd = async () => {
-    setError(null);
-    try {
-      await addItem(product._id, variantId, qty);
-      setAdded(true);
-      setTimeout(() => setAdded(false), 1800);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const onWish = async () => {
-    const result = await toggle(product._id);
-    if (result?.requiresAuth) navigate("/login", { state: { from: `/products/${slug}` } });
-  };
+  const selected = product.variants?.find((v) => v._id === variantId) ?? null;
+  const shownPrice = selected?.price ?? product.price;
 
   return (
     <div className="pt-16 sm:pt-[4.5rem]">
@@ -150,15 +94,17 @@ export default function ProductDetail() {
               </p>
             )}
 
-            <div className="mt-6 flex items-baseline gap-3">
-              <span className="text-2xl font-bold tabular-nums">${product.price}</span>
-              {product.compareAtPrice > product.price && (
+<div className="mt-6 flex items-baseline gap-3">
+              {/* Follows the selected variant: sizes differ in price, so showing the
+                  base price while a larger variant is picked would misquote it. */}
+              <span className="text-2xl font-bold tabular-nums">${shownPrice}</span>
+              {product.compareAtPrice > shownPrice && (
                 <>
                   <span className="text-base tabular-nums text-ink-400 line-through">
                     ${product.compareAtPrice}
                   </span>
                   <span className="rounded-full bg-brass-500/10 px-2.5 py-1 text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-brass-500">
-                    Save ${product.compareAtPrice - product.price}
+                    Save ${product.compareAtPrice - shownPrice}
                   </span>
                 </>
               )}
@@ -188,74 +134,31 @@ export default function ProductDetail() {
               </fieldset>
             )}
 
-            {/* Quantity + add */}
+            {/*
+              There is no cart on a static build, so the buy panel is a pair of
+              enquiries: a mailto with the product already in the subject line, and a
+              link to the contact form for anything more involved. Both are plain
+              links, so they work with JavaScript doing nothing at all.
+            */}
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <div className="flex h-12 items-center rounded-full border border-shell-300">
-                <button
-                  type="button"
-                  onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  disabled={qty <= 1}
-                  aria-label="Decrease quantity"
-                  className="grid h-full w-11 place-items-center text-ink-500 transition-colors hover:text-ink-900 disabled:opacity-30"
-                >
-                  −
-                </button>
-                <span className="w-8 text-center text-sm font-semibold tabular-nums" aria-live="polite">
-                  {qty}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
-                  disabled={qty >= maxQty}
-                  aria-label="Increase quantity"
-                  className="grid h-full w-11 place-items-center text-ink-500 transition-colors hover:text-ink-900 disabled:opacity-30"
-                >
-                  +
-                </button>
-              </div>
-
               <Button
-                type="button"
                 variant="solid"
                 size="lg"
-                onClick={onAdd}
-                disabled={!inStock || busy}
+                href={`mailto:${BUSINESS.email}?subject=${encodeURIComponent(
+                  `Enquiry — ${product.name}${selected ? ` (${selected.name})` : ""}`
+                )}`}
                 className="flex-1 sm:flex-none sm:min-w-[13rem]"
               >
-                {!inStock ? "Sold out" : added ? "Added to cart" : "Add to Cart"}
+                Enquire about this
               </Button>
 
-              <button
-                type="button"
-                onClick={onWish}
-                aria-pressed={wished}
-                aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
-                className="grid h-12 w-12 place-items-center rounded-full border border-shell-300 text-ink-700 transition-colors hover:border-ink-900"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="18"
-                  height="18"
-                  fill={wished ? "currentColor" : "none"}
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M12 20s-7-4.4-7-9.2A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7 2.8C19 15.6 12 20 12 20z" />
-                </svg>
-              </button>
+              <Button variant="outline" size="lg" to="/contact">
+                Contact us
+              </Button>
             </div>
 
-            <p className="mt-3 text-xs text-ink-400" aria-live="polite">
-              {error ? (
-                <span className="text-brass-500">{error}</span>
-              ) : inStock ? (
-                `${product.stock} in stock · ships in 1–2 business days`
-              ) : (
-                "Currently unavailable"
-              )}
+            <p className="mt-3 text-xs text-ink-400">
+              Prices shown include VAT. We reply to enquiries within one business day.
             </p>
 
             {/* Description */}
@@ -337,10 +240,9 @@ export default function ProductDetail() {
           The same scroll narrative as the homepage and the About page.
 
           The compact viewer at the top of this page stays interactive on purpose:
-          beside a price and an Add to Cart button, dragging the explode slider is
-          the most direct way to understand what you are buying. This section is the
-          guided version of the same product, for visitors who would rather scroll
-          than drag.
+          beside the price, dragging the explode slider is the most direct way to
+          understand what you are looking at. This section is the guided version of
+          the same product, for visitors who would rather scroll than drag.
         */}
         {product.modelUrl && product.hotspots?.length > 0 && (
           <section className="mt-24 border-t border-shell-300 sm:mt-32">
@@ -360,12 +262,12 @@ export default function ProductDetail() {
         )}
 
         {/* ------------------------------ related ------------------------------ */}
-        {product.related?.length > 0 && (
+        {related.length > 0 && (
           <Reveal className="mt-24">
             <h2 className="display text-xl sm:text-2xl">You might also need</h2>
             <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {product.related.map((p) => (
-                <ProductCard key={p._id} product={p} />
+              {related.map((p) => (
+                <ProductCard key={p.slug} product={p} />
               ))}
             </div>
           </Reveal>

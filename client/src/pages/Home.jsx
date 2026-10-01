@@ -1,48 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
-
-import { fetchProduct, fetchProducts } from "../api/endpoints.js";
+import { fetchProduct, fetchRelated } from "../api/endpoints.js";
 import Hero from "../components/home/Hero.jsx";
 import ScrollStory from "../components/home/ScrollStory.jsx";
 import FeatureBreakdown from "../components/home/FeatureBreakdown.jsx";
 import ProductCard from "../components/product/ProductCard.jsx";
 import Reveal from "../components/ui/Reveal.jsx";
 import Button from "../components/ui/Button.jsx";
-import { ErrorState, Skeleton } from "../components/ui/Feedback.jsx";
 import { SHOP_PATH } from "../data/paths.js";
 
 const SLUG = "pop-up-drain-assembly";
 
 export default function Home() {
-  // The hero, the explorer and the product grid all describe the same product,
-  // so it is fetched once and shared across the page.
-  const { data: product, isLoading, error, refetch } = useQuery({
-    queryKey: ["product", SLUG],
-    queryFn: () => fetchProduct(SLUG),
-    staleTime: 5 * 60_000,
-  });
-
-  const { data: related } = useQuery({
-    queryKey: ["products", { limit: 3, exclude: SLUG }],
-    queryFn: () => fetchProducts({ limit: 3, sort: "rating" }),
-    staleTime: 5 * 60_000,
-  });
-
-  const others = (related?.items ?? []).filter((p) => p.slug !== SLUG).slice(0, 3);
+  // The catalogue is baked in at build time, so these are plain lookups: no request
+  // and no loading or error state, because nothing can be pending and nothing can fail.
+  const product = fetchProduct(SLUG);
+  const others = fetchRelated(SLUG, 3);
 
   return (
     <>
-      {isLoading && (
-        <div className="grid min-h-[100svh] place-items-center pt-16">
-          <Skeleton className="h-[60vh] w-full max-w-3xl rounded-xl" />
-        </div>
-      )}
-
-      {error && (
-        <div className="grid min-h-[80svh] place-items-center px-5 pt-24">
-          <ErrorState message={error.message} onRetry={refetch} />
-        </div>
-      )}
-
       {product && (
         <>
           <Hero product={product} />
@@ -89,8 +63,8 @@ export default function Home() {
 
                 <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {others.map((p, i) => (
-                    <Reveal key={p._id} delay={i * 0.07}>
-                      <ProductCard product={p} index={i} />
+                    <Reveal key={p.slug} delay={i * 0.07}>
+                      <ProductCard product={p} />
                     </Reveal>
                   ))}
                 </div>

@@ -1,40 +1,54 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { submitContact } from "../api/endpoints.js";
 import PageHeader, { Banner, Field } from "../components/ui/Page.jsx";
 import Button from "../components/ui/Button.jsx";
 import { BRAND_STATS, BUSINESS } from "../data/content.js";
 
 const EMPTY = { name: "", email: "", subject: "", message: "" };
 
+/*
+ * The form composes a `mailto:` and hands it to the visitor's own mail client.
+ *
+ * It used to POST to the contact endpoint and store the message, but there is no
+ * server to receive it now. Client-side validation is kept because it still catches
+ * the common mistakes before the mail client opens — an empty mailto body is a much
+ * worse experience than an inline error.
+ *
+ * Nothing is sent anywhere: if the visitor's mail client is misconfigured the message
+ * simply does not arrive, and the direct email address in the sidebar is the fallback.
+ */
 export default function Contact() {
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
-  const [sent, setSent] = useState(false);
 
   const set = (k) => (e) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
     setErrors((prev) => (prev[k] ? { ...prev, [k]: undefined } : prev));
   };
 
-  const send = useMutation({
-    mutationFn: submitContact,
-    onSuccess: () => {
-      setSent(true);
-      setForm(EMPTY);
-    },
-  });
-
   const submit = (e) => {
     e.preventDefault();
+
     const next = {};
     if (!form.name.trim()) next.name = "Required";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) next.email = "Enter a valid email";
     if (form.message.trim().length < 10) next.message = "Tell us a little more (10+ characters)";
     setErrors(next);
     if (Object.keys(next).length) return;
-    send.mutate(form);
+
+    const subject = form.subject.trim() || `Enquiry from ${form.name.trim()}`;
+    const body = [
+      `Name: ${form.name.trim()}`,
+      `Email: ${form.email.trim()}`,
+      "",
+      form.message.trim(),
+    ].join("\n");
+
+    const href = `mailto:${BUSINESS.email}?subject=${encodeURIComponent(
+      subject
+    )}&body=${encodeURIComponent(body)}`;
+
+    window.location.href = href;
   };
 
   return (
@@ -49,76 +63,54 @@ export default function Contact() {
         <div className="grid gap-12 lg:grid-cols-[1fr_20rem] lg:gap-20">
           {/* ------------------------------- form ------------------------------- */}
           <div className="max-w-xl">
-            {sent ? (
-              <div className="rounded-xl border border-shell-300 bg-shell-50 p-8">
-                <h2 className="text-lg font-semibold tracking-tight">Message received.</h2>
-                <p className="mt-3 text-sm leading-relaxed text-ink-500">
-                  Thanks for getting in touch. A specialist will reply to the address you gave us,
-                  normally within one business day.
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-6"
-                  onClick={() => setSent(false)}
-                >
-                  Send another
-                </Button>
+            <form onSubmit={submit} noValidate className="space-y-4">
+              <Banner tone="info">
+                This form opens your own email app with the message pre-filled — nothing is
+                stored on the site.
+              </Banner>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  label="Name"
+                  name="c-name"
+                  autoComplete="name"
+                  value={form.name}
+                  onChange={set("name")}
+                  error={errors.name}
+                />
+                <Field
+                  label="Email"
+                  name="c-email"
+                  type="email"
+                  autoComplete="email"
+                  value={form.email}
+                  onChange={set("email")}
+                  error={errors.email}
+                />
               </div>
-            ) : (
-              <form onSubmit={submit} noValidate className="space-y-4">
-                {send.isError && <Banner tone="error">{send.error.message}</Banner>}
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field
-                    label="Name"
-                    name="c-name"
-                    autoComplete="name"
-                    value={form.name}
-                    onChange={set("name")}
-                    error={errors.name}
-                  />
-                  <Field
-                    label="Email"
-                    name="c-email"
-                    type="email"
-                    autoComplete="email"
-                    value={form.email}
-                    onChange={set("email")}
-                    error={errors.email}
-                  />
-                </div>
+              <Field
+                label="Subject (optional)"
+                name="c-subject"
+                value={form.subject}
+                onChange={set("subject")}
+              />
 
-                <Field
-                  label="Subject (optional)"
-                  name="c-subject"
-                  value={form.subject}
-                  onChange={set("subject")}
-                />
+              <Field
+                as="textarea"
+                label="Message"
+                name="c-message"
+                rows={6}
+                value={form.message}
+                onChange={set("message")}
+                error={errors.message}
+                placeholder="Which basin, which cut-out, and what is happening?"
+              />
 
-                <Field
-                  as="textarea"
-                  label="Message"
-                  name="c-message"
-                  rows={6}
-                  value={form.message}
-                  onChange={set("message")}
-                  error={errors.message}
-                  placeholder="Which basin, which cut-out, and what is happening?"
-                />
-
-                <Button
-                  type="submit"
-                  variant="solid"
-                  size="lg"
-                  withArrow
-                  disabled={send.isPending}
-                >
-                  {send.isPending ? "Sending…" : "Send message"}
-                </Button>
-              </form>
-            )}
+              <Button type="submit" variant="solid" size="lg" withArrow>
+                Send message
+              </Button>
+            </form>
           </div>
 
           {/* ------------------------------- aside ------------------------------ */}

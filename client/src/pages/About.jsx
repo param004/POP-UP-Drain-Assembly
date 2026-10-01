@@ -2,7 +2,6 @@ import PageHeader from "../components/ui/Page.jsx";
 import Button from "../components/ui/Button.jsx";
 import Reveal from "../components/ui/Reveal.jsx";
 import ScrollStory from "../components/home/ScrollStory.jsx";
-import { useQuery } from "@tanstack/react-query";
 import { fetchProduct } from "../api/endpoints.js";
 import { BRAND_STATS, TIMELINE } from "../data/content.js";
 import { SHOP_PATH } from "../data/paths.js";
@@ -23,11 +22,8 @@ const PRINCIPLES = [
 ];
 
 export default function About() {
-  const { data: product } = useQuery({
-    queryKey: ["product", "pop-up-drain-assembly"],
-    queryFn: () => fetchProduct("pop-up-drain-assembly"),
-    staleTime: 5 * 60_000,
-  });
+  // Baked in at build time, so this is a lookup rather than a request.
+  const product = fetchProduct("pop-up-drain-assembly");
 
   return (
     <div className="pt-16 sm:pt-[4.5rem]">

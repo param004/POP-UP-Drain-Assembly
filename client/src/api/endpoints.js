@@ -1,82 +1,36 @@
-import client, { getSessionId } from "./client.js";
+import PRODUCTS from "../data/products.json";
 
-/* ---------------------------------- products --------------------------------- */
+/*
+ * Static product access.
+ *
+ * These replace the API calls the site used to make. The catalogue is baked into the
+ * bundle at build time by `scripts/generate-products.mjs`, so reads are synchronous
+ * array lookups: there is no request, no loading state, and no way for it to fail.
+ *
+ * The exported names match the old endpoint functions so call sites read the same,
+ * but note they are no longer async — anything that used `await` on them still works,
+ * though a component that renders a loading or error branch can no longer reach one.
+ */
 
-export const fetchProducts = (params = {}) =>
-  client.get("/products", { params }).then((r) => r.data);
+const ALL = PRODUCTS;
 
-export const fetchProductFilters = () =>
-  client.get("/products/filters").then((r) => r.data);
+/** Every active product, newest catalogue order (alphabetical by name). */
+export const fetchProducts = () => ALL;
 
-export const fetchProduct = (slug) => client.get(`/products/${slug}`).then((r) => r.data);
+/** A single product by slug, or `null` when there is no match. */
+export const fetchProduct = (slug) => ALL.find((p) => p.slug === slug) ?? null;
 
-export const createProduct = (payload) => client.post("/products", payload).then((r) => r.data);
+/**
+ * Products other than `excludeSlug`, for the "also consider" grid.
+ * Sorted by rating then review count, matching how the API ordered them.
+ */
+export const fetchRelated = (excludeSlug, limit = 3) =>
+  ALL.filter((p) => p.slug !== excludeSlug)
+    .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || (b.numReviews ?? 0) - (a.numReviews ?? 0))
+    .slice(0, limit);
 
-export const updateProduct = (id, payload) =>
-  client.put(`/products/${id}`, payload).then((r) => r.data);
-
-export const deleteProduct = (id) => client.delete(`/products/${id}`).then((r) => r.data);
-
-/* ----------------------------------- auth ----------------------------------- */
-
-export const register = (payload) =>
-  client
-    .post("/auth/register", { ...payload, sessionId: getSessionId() })
-    .then((r) => r.data);
-
-export const login = (payload) =>
-  client
-    .post("/auth/login", { ...payload, sessionId: getSessionId() })
-    .then((r) => r.data);
-
-export const fetchMe = () => client.get("/auth/me").then((r) => r.data);
-
-export const logout = () => client.post("/auth/logout").then((r) => r.data);
-
-export const updateProfile = (payload) => client.put("/auth/me", payload).then((r) => r.data);
-
-/* ----------------------------------- cart ----------------------------------- */
-
-export const fetchCart = () => client.get("/cart").then((r) => r.data);
-
-export const addToCart = ({ productId, variantId = null, qty = 1 }) =>
-  client.post("/cart", { productId, variantId, qty, sessionId: getSessionId() }).then((r) => r.data);
-
-export const updateCartItem = (itemId, qty) =>
-  client.put(`/cart/${itemId}`, { qty }).then((r) => r.data);
-
-export const removeCartItem = (itemId) =>
-  client.delete(`/cart/${itemId}`).then((r) => r.data);
-
-export const clearCart = () => client.delete("/cart").then((r) => r.data);
-
-/* --------------------------------- wishlist --------------------------------- */
-
-export const fetchWishlist = () => client.get("/wishlist").then((r) => r.data);
-
-export const addToWishlist = (productId) =>
-  client.post(`/wishlist/${productId}`).then((r) => r.data);
-
-export const removeFromWishlist = (productId) =>
-  client.delete(`/wishlist/${productId}`).then((r) => r.data);
-
-/* ---------------------------------- orders ---------------------------------- */
-
-export const createOrder = (payload) =>
-  client.post("/orders", { ...payload, sessionId: getSessionId() }).then((r) => r.data);
-
-export const fetchOrder = (idOrNumber) => client.get(`/orders/${idOrNumber}`).then((r) => r.data);
-
-export const fetchMyOrders = () => client.get("/orders").then((r) => r.data);
-
-export const fetchAllOrders = (params = {}) =>
-  client.get("/orders/all", { params }).then((r) => r.data);
-
-export const updateOrderStatus = (id, paymentStatus) =>
-  client.put(`/orders/${id}/payment-status`, { paymentStatus }).then((r) => r.data);
-
-/* ---------------------------------- contact --------------------------------- */
-
-export const submitContact = (payload) => client.post("/contact", payload).then((r) => r.data);
-
-export const fetchContactMessages = () => client.get("/contact").then((r) => r.data);
+/** Distinct categories, for anything that groups or filters the catalogue. */
+export const fetchProductFilters = () => ({
+  categories: [...new Set(ALL.map((p) => p.category).filter(Boolean))].sort(),
+  materials: [...new Set(ALL.map((p) => p.material).filter(Boolean))].sort(),
+});

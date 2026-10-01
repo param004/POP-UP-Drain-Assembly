@@ -1,138 +1,159 @@
-# Premier Products® — Drain Assembly Storefront
+# Premier Products® — Drain Assembly Showcase
 
 A premium, minimalist product showcase for a plumbing brand whose hero product is a
 **pop-up drain assembly**, built around an interactive 3D viewer that lets visitors take
 the product apart.
 
-Full **MERN** stack: React + Vite + Tailwind on the front, Express + MongoDB on the back,
-with JWT auth, cart, wishlist, checkout and an admin dashboard.
+A **static site**: React + Vite + Tailwind, with the product catalogue baked into the
+bundle at build time. There is no backend to run, no database to reach at runtime, and
+no secrets in the deploy config. Enquiries go through the visitor's own mail client.
+
+It was originally a full MERN storefront with cart, checkout and accounts. Those were
+removed — see "What changed" below.
 
 ---
 
 ## Quick start
 
-### One command (recommended)
+No database, no API, no environment variables.
 
 ```bash
-cd pop-up-drain-site
-./start.sh
-```
-
-Open **http://localhost:4000**. The script checks MongoDB, seeds on first run, builds the
-client and the server bundle if they're missing, and then serves everything from a single
-process. Flags: `--rebuild` forces a fresh build, `--dev` also runs Vite.
-
-MongoDB must be running: `brew services start mongodb-community`.
-
-**Seeded admin:** `admin@premierproducts.com` / `Admin123!` (override with `SEED_ADMIN_EMAIL` /
-`SEED_ADMIN_PASSWORD`). The sign-in page also shows these for convenience.
-
-### Two terminals (development)
-
-```bash
-# 1. API  (needs MongoDB running)
-cd server
-cp .env.example .env          # then set MONGODB_URI and a real JWT_SECRET
-npm install
-npm run seed                  # creates 6 products, hotspots and the admin user
-npm run dev                   # http://localhost:4000
-
-# 2. Client
 cd client
 npm install
 npm run dev                   # http://localhost:5173
 ```
 
-Open http://localhost:5173.
-
-### Production (single process)
-
-The Express server serves the built client from `client/dist`, so the whole app is one
-process on one origin:
+To produce the deployable build:
 
 ```bash
-cd client && npm run build
-cd ../server && npm run build   # bundles the API into dist/server.cjs
-NODE_ENV=production npm start   # http://localhost:4000
+cd client
+npm run build                 # → client/dist, ready for any static host
+npm run preview               # serve it at http://localhost:4173
 ```
 
-> **Why the server is bundled.** `npm run build` inlines every dependency into a single
-> `dist/server.cjs` (~4.7 MB). Normally this is a nicety, but on a slow, busy, or nearly
-> full disk Node can spend *minutes* walking the module graph — a single `import "express"`
-> was measured at 264 s cold versus 74 ms warm. The bundle reduces startup to one file
-> read, which brought the boot time from "did not finish in five minutes" to about three
-> seconds. The bundle is emitted as CommonJS because mongoose and friends call
-> `require("fs")` internally, which an ESM output cannot express.
->
-> For the same reason, `server.js` preloads `client/dist` into memory at boot (31 files,
-> ~3 MB) rather than streaming from disk: serving the 1.5 MB GLB off disk intermittently
-> failed with `ETIMEDOUT` mid-read, which surfaced as a 500 on the 3D model and a blank
-> page. `npm start` still works as a fallback if the bundle is missing.
+### Refreshing the catalogue (optional)
+
+The committed `client/src/data/products.json` is what gets built. To pull the catalogue
+from MongoDB instead:
+
+```bash
+cd client
+export MONGODB_URI="mongodb+srv://..."
+npm run gen:data              # rewrites src/data/products.json
+```
+
+Commit the result — the build reads the file, not the database.
+
+### Running the old server (archive)
+
+`server/` is retained but unused by the deployed site. It still serves the pre-static
+version if you need it:
+
+```bash
+./start.sh                    # http://localhost:4000
+```
+
+### Production (static build)
+
+The site is a static SPA. There is no server process to run — `npm run build` writes
+plain files to `client/dist`, which any static host can serve:
+
+```bash
+cd client && npm run build      # → client/dist
+npm run preview                 # serve dist/ locally at :4173
+```
+
+`npm run build` runs the product generator in `--offline` mode, which reuses the
+committed `client/src/data/products.json`. **No database connection is needed to
+build or deploy.** The host has no secrets to configure.
+
+To refresh the catalogue from MongoDB, set `MONGODB_URI` and run:
+
+```bash
+npm run gen:data                # writes client/src/data/products.json
+git commit -am "refresh catalogue"   # the JSON is the source of truth for the build
+```
 
 ### Ports
 
 | Service | Port | Notes |
 | --- | --- | --- |
-| API + static client | `4000` | Vite proxies `/api` here in development |
 | Vite dev server | `5173` | **Vite auto-increments if 5173 is taken.** On the machine this was built on, 5173–5175 were already occupied, so the dev server ran on 5176. Check the Vite banner for the real port. |
+| `vite preview` | `4173` | Serves the built `dist/` |
 
-> Port `5000` is unusable on stock macOS — AirPlay Receiver already owns it. The API
-> defaults to `4000` for that reason.
+> The API no longer runs. `server/` is retained as a source archive and for the
+> `npm run gen:data` script, but nothing in the deployed site calls it.
 
-### Deploying to Railway
+### Deploying to Netlify
 
-The app is a single Node process that serves both the API and the built client, so it
-deploys as one service. `railway.json` in the repo root carries the build and start
-commands, so the only manual work is the environment variables.
+**1. Connect the repo.** [netlify.com](https://www.netlify.com/) → **Add new site** →
+**Import an existing project** → pick this repository. Netlify reads `netlify.toml`
+from the repo root, so there is nothing to fill in by hand:
 
-**1. Create the project.** [railway.app](https://railway.app/) → **New Project** →
-**Deploy from GitHub repo** → pick this repository.
+| Setting | Value | Source |
+| --- | --- | --- |
+| Base directory | `client` | `netlify.toml` |
+| Build command | `npm run build` | `netlify.toml` |
+| Publish directory | `client/dist` | derived from `base` + `publish` |
 
-**2. Set the root directory.** Railway service → **Settings** → **Root Directory** =
-`server`. This keeps dotenv resolving from `server/` and preserves the
-`../client/dist` relationship that `findClientDist()` walks upwards to find.
+No environment variables are required. The build is fully offline.
 
-**3. Environment variables.** Service → **Variables** → paste raw values, no quotes,
-no `export`:
+**2. Enable the SPA redirect.** `netlify.toml` already contains:
 
-| Variable | Value |
-| --- | --- |
-| `MONGODB_URI` | `mongodb+srv://<user>:<password>@<cluster>.mongodb.net/pop-up-drain?appName=<cluster>` |
-| `JWT_SECRET` | `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
-| `NODE_ENV` | `production` |
-| `CLIENT_URL` | `*` while the domain is unknown, then the real origin (see below) |
-| `SEED_ADMIN_EMAIL` | admin email of your choice |
-| `SEED_ADMIN_PASSWORD` | admin password of your choice |
-
-Do **not** set `PORT` — Railway injects it and `server.js` already reads
-`process.env.PORT`. Do **not** set `VITE_API_URL`: the client and API share an origin,
-so the relative `/api` default is correct, and a cross-origin API would be blocked by
-this app's own CSP (`connectSrc: ["'self'"]`).
-
-**4. Atlas IP allowlist.** If connection attempts time out, the deploy host's outbound
-IP is not in Atlas → **Network Access** → **IP Access List**. Add `0.0.0.0/0` for a
-deployed app.
-
-**5. Deploy, then tighten CORS.** With `CLIENT_URL=*` any origin is allowed. Once the
-domain is known, set `CLIENT_URL=https://<your-domain>` and redeploy. Same-origin
-deployment does not rely on CORS at all, so this only matters for defence in depth.
-
-> **Never run `npm run seed` against production.** It calls `Product.deleteMany({})`
-> and wipes the catalogue. It is not part of the build or start command. `connectDB()`
-> retries with backoff (5 attempts, 20s each) so a cold database start does not crash
-> the process; a genuinely wrong URI still fails fast with a clear message.
-
-**Verify a deployment:**
-
-```bash
-BASE=https://<your-domain>
-curl -s $BASE/api/health            # {"status":"ok",...}
-curl -s -o /dev/null -w '%{http_code}\n' $BASE/models/pop_up_drain_final_animation.glb
+```toml
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 ```
 
-The GLB is the asset most likely to fail silently, so check it explicitly.
+Without this, a hard refresh or a shared deep link like `/products/pop-up-drain`
+returns Netlify's 404 page, because that path is not a file in `dist/`.
+
+**3. Verify a deployment:**
+
+```bash
+BASE=https://<your-site>.netlify.app
+curl -s -o /dev/null -w '%{http_code}\n' $BASE/                      # 200
+curl -s -o /dev/null -w '%{http_code}\n' $BASE/products/pop-up-drain # 200 via the rewrite
+curl -s -o /dev/null -w '%{http_code} %{size_download}\n' \
+  $BASE/models/pop_up_drain_final_animation.glb                     # 200 ~1500000
+```
+
+Check the GLB explicitly — it is the asset most likely to fail silently, and it is
+what the 3D viewer depends on.
+
+> **Deploying to a host other than Netlify?** Any static host works. The only
+> requirement is that unknown paths fall back to `index.html`. For nginx:
+> `try_files $uri $uri/ /index.html;`
 
 ---
+
+## What changed when this became a static site
+
+The store was originally a full-stack app with a MongoDB-backed API. It was reduced
+to a showcase because there was no way to run the API in production, and half a shop
+that cannot take an order is worse than no shop.
+
+**Removed:** cart, checkout, orders, wishlist, accounts, login, registration, admin
+dashboard, and the contact-message endpoint.
+
+**Replaced:**
+
+| Was | Now |
+| --- | --- |
+| `GET /api/products` | `fetchProducts()` reads the bundled `products.json` |
+| `GET /api/products/:slug` | `fetchProduct(slug)` — a synchronous array lookup |
+| `POST /api/contact` | A `mailto:` link carrying the composed message |
+| `POST /api/auth`, `/api/cart`, `/api/wishlist` | Nothing. The features are gone. |
+
+**Consequence for editors:** a product change in the database does *not* update the
+live site until `npm run gen:data` is run and the result is committed and redeployed.
+This is inherent to baking data into a bundle.
+
+The `server/` directory is still in the repository. It is not deployed, and the
+static build never calls it, but it holds the seed script and the schema the
+catalogue is generated from.
 
 ## The scroll narrative
 
@@ -302,19 +323,18 @@ the pivot collar rocks on its pin, and the stopper tip is levered up out of its 
 ## Architecture
 
 ```
-pop-up-drain-site/
-├── server/
+POP-UP-Drain-Assembly/
+├── netlify.toml                  base=client, publish=dist, SPA fallback + cache headers
+├── start.sh                      runs the archived full-stack version
+├── server/                       ARCHIVE — not deployed, not called by the build
 │   ├── config/db.js              Mongoose connection
 │   ├── models/                   Product, User, Cart, Order, ContactMessage
-│   ├── controllers/              one per resource
-│   ├── routes/                   route tables, mounted in routes/index.js
-│   ├── middleware/               auth.js (JWT guards), errorHandler.js
-│   ├── utils/
 │   ├── seed/seed.js              products, hotspots, admin user
-│   ├── server.js                 app, helmet/CSP, static client, graceful shutdown
-│   └── .env.example
-└── client/
+│   └── server.js                 app, helmet/CSP, static client
+└── client/                       the entire deployable site
     ├── public/models/            pop_up_drain_final_animation.glb
+    ├── scripts/
+    │   └── generate-products.mjs  MONGODB_URI → src/data/products.json
     └── src/
         ├── components/
         │   ├── layout/           Navbar, Footer, ContactStrip, ChatBubble, ScrollToTop, NewsletterForm
@@ -322,15 +342,11 @@ pop-up-drain-site/
         │   │                     ExplodeSlider, StudioEnvironment, ProductViewer
         │   ├── home/             Hero, ScrollStory, FeatureBreakdown
         │   ├── product/          ProductCard (live 3D thumbs where a model exists)
-        │   ├── auth/             AuthForm
         │   └── ui/               Button, Accordion, Reveal, Feedback, Page
-        ├── pages/                Home, ProductDetail, Cart, Checkout,
-        │                         OrderConfirmation, About, FAQs, Contact, Wishlist,
-        │                         Login, Register, Account, Admin, NotFound
-        ├── context/              AuthContext, CartContext, WishlistContext
+        ├── pages/                Home, ProductDetail, About, FAQs, Contact, NotFound
         ├── hooks/                useScrollStory.js, useInView.js, useMediaQuery.js
-        ├── api/                  axios instance + endpoint functions
-        ├── data/                 explodeConfig.js, content.js, paths.js
+        ├── api/endpoints.js      synchronous reads over products.json
+        ├── data/                 products.json (generated), explodeConfig.js, content.js, paths.js
         └── styles/index.css      Tailwind v4 theme tokens
 ```
 
@@ -356,54 +372,32 @@ as soon as the visitor zooms manually — so auto-framing never fights the user.
 
 ---
 
-## API
+## Data access
 
-```
-GET    /api/health
-GET    /api/products              ?category&material&minPrice&maxPrice&search&sort&page&limit
-GET    /api/products/filters      distinct categories/materials + price bounds
-GET    /api/products/:slugOrId    includes 3 related products
-POST   /api/products              admin
-PUT    /api/products/:id          admin
-DELETE /api/products/:id          admin (soft delete)
+There is no API. `client/src/api/endpoints.js` is a thin module over the bundled
+catalogue, and it keeps the old endpoint function names so call sites read the same:
 
-POST   /api/auth/register         also claims the guest cart
-POST   /api/auth/login            also merges the guest cart
-GET    /api/auth/me
-PUT    /api/auth/me
-POST   /api/auth/logout
+| Function | Returns |
+| --- | --- |
+| `fetchProducts()` | All active products, alphabetically by name |
+| `fetchProduct(slug)` | One product, or `null` |
+| `fetchRelated(slug)` | Up to 3 products in the same category |
+| `fetchProductFilters()` | Distinct categories and materials, plus price bounds |
 
-GET    /api/cart                  user via JWT, guest via x-session-id
-POST   /api/cart
-PUT    /api/cart/:itemId
-DELETE /api/cart/:itemId
-DELETE /api/cart
+These are **synchronous**, not promises. `await` on them still works, but a component
+can no longer reach its loading or error branch — there is nothing to wait for and
+nothing to fail. That is why the loading spinners and error banners are gone from the
+pages that used to have them.
 
-GET    /api/wishlist              auth required
-POST   /api/wishlist/:productId   idempotent
-DELETE /api/wishlist/:productId
+The catalogue lives in `client/src/data/products.json`, regenerated from MongoDB by
+`npm run gen:data`. The generator keeps only the fields the pages render and drops
+everything internal (`__v`, timestamps, `stock`, `_id`) — see the header comment in
+`client/scripts/generate-products.mjs` for the full field list.
 
-POST   /api/orders                recomputes all prices server-side
-GET    /api/orders/:idOrNumber
-GET    /api/orders                own history (auth)
-GET    /api/orders/all            admin
-PUT    /api/orders/:id/payment-status   admin
-
-POST   /api/contact               stores, and emails if SMTP is configured
-GET    /api/contact               admin
-```
-
-Notable behaviour:
-
-- **Guest carts** work without an account. The client generates a `sessionId`, keeps it in
-  `localStorage` and sends it as `x-session-id`. Registering or signing in claims that
-  cart server-side, merging quantities for items already in the account cart.
-- **Order totals are never trusted from the client.** `createOrder` re-reads every price
-  and re-checks stock from the database, then decrements stock and empties the cart only
-  after payment succeeds.
-- **Passwords** are bcrypt-hashed on save and the field is `select: false`, so it cannot
-  leak through a query by accident. Credential endpoints are rate limited.
-- **Deletes are soft** (`isActive: false`) so order history keeps referring to real rows.
+> **If `products.json` is missing or empty, the build fails.** It is committed to the
+> repository and `--offline` reuses it, so this only happens if the file was deleted
+> without regenerating. Vite would otherwise bundle an empty array and publish a site
+> whose every product page 404s — a failure with no build error attached.
 
 ---
 
@@ -417,29 +411,26 @@ Confirm before shipping — it is the only part of this build that is not real:
   *shape* of the data is right; the numbers are not measurements.
 - **The warranty** (5-year mechanism, 2-year finish, 1-year gasket) in
   `client/src/data/content.js` and the FAQs.
-- **Shipping terms** — $150 free-shipping threshold, 8 % tax, $12 flat rate. These live
-  in three places and should be centralised before launch: `cartController`/`orderController`
-  on the server, and `Cart.jsx` / `Checkout.jsx` on the client.
-- **Email addresses and the `CONTACT_TO` env var.** The real business contact details
-  (address, phone, email) are now in `BUSINESS` at the top of
-  `client/src/data/content.js` and are shown in a footer contact strip on every page
-  plus the contact page. `CONTACT_TO` on the server is still unset, so contact-form
-  submissions currently go nowhere — point it at `BUSINESS.email` (or a real inbox).
+- **Shipping terms** — the $150 free-shipping threshold and 8 % tax were removed with
+  checkout. What remains is the FAQ copy in `client/src/data/content.js`.
+- **Email addresses.** The business contact details (address, phone, email) are in
+  `BUSINESS` at the top of `client/src/data/content.js`, shown in a footer contact strip
+  on every page plus the contact page. **The contact form composes a `mailto:` to
+  `BUSINESS.email`** — confirm that address is a real monitored inbox, because it is now
+  the only path a visitor has to reach the business.
 - **The newsletter form** validates and confirms locally; there is no mailing-list
   backend, so no data leaves the browser. One line in `NewsletterForm.jsx` to wire it up.
 - **The chat bubble** is a self-contained stand-in for a third-party widget (Intercom et
   al) so no vendor script is required to demo the pattern.
-- **Payments are mocked.** `paymentMethod: "mock"` marks the order paid and decrements
-  stock exactly as a real charge would. The checkout page has a "simulate a declined
-  payment" control to exercise the unpaid branch. Swap in Stripe by replacing that branch
-  in `orderController.createOrder`; no schema changes are needed.
+- **Nothing is transactable.** There is no cart, no checkout and no payment integration.
+  Every "enquire" action on the site opens the visitor's mail client with a pre-filled
+  message. This is intentional, not unfinished — see "What changed" above.
 - **Product photography** does not exist in the brief's data set, and only two of the six
   seeded products ship a 3D model. Those two get a live WebGL thumbnail; the other four get
-  **no image at all** — the card keeps its soft ground with the wishlist and quick-add
-  controls, and the name, price and rating below do the identifying. Two stand-ins were
-  tried and rejected: a generated technical line-drawing, then a typographic panel. Both
-  read as filler; the plain card reads better. Real product photography is the proper
-  upgrade here.
+  **no image at all** — the card keeps its soft ground, and the name, price and rating do
+  the identifying. Two stand-ins were tried and rejected: a generated technical
+  line-drawing, then a typographic panel. Both read as filler; the plain card reads
+  better. Real product photography is the proper upgrade here.
 
 ---
 
@@ -544,15 +535,28 @@ page. The label is now anchored to the left of the dot on desktop
 
 ## Scripts
 
-**server**
+**client** — this is what you need
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Vite dev server |
+| `npm run build` | production build to `dist/` (offline, no database) |
+| `npm run preview` | serve the built `dist/` on :4173 |
+| `npm run gen:data` | refresh `src/data/products.json` from `MONGODB_URI` |
+| `npm run build:live` | regenerate from the database, then build |
+| `npm run lint` | oxlint |
+
+**server** — archive only, not deployed
 
 | Command | Description |
 | --- | --- |
 | `npm run dev` | `node --watch server.js` |
 | `npm start` | production start |
-| `npm run build` | bundle the API and all dependencies into `dist/server.cjs` |
-| `npm run serve:bundle` | run the bundle directly |
+| `npm run build` | bundle the API into `dist/server.cjs` |
 | `npm run seed` | wipe and re-seed products, hotspots and the admin user |
+
+> **Never run `npm run seed` against a database you care about.** It calls
+> `Product.deleteMany({})` and wipes the catalogue.
 
 **root**
 
@@ -561,12 +565,3 @@ page. The label is now anchored to the left of the dot on desktop
 | `./start.sh` | check MongoDB, seed, build if needed, serve on `localhost:4000` |
 | `./start.sh --rebuild` | force a fresh client build and server bundle |
 | `./start.sh --dev` | also start the Vite dev server |
-
-**client**
-
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Vite dev server with `/api` proxied to `localhost:4000` |
-| `npm run build` | production build to `dist/` |
-| `npm run preview` | serve the build |
-| `npm run lint` | oxlint |

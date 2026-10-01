@@ -6,7 +6,9 @@
   "description": "POP-UP® Drain Assembly — premium 3D product showcase",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "gen:data": "node scripts/generate-products.mjs",
+    "build": "node scripts/generate-products.mjs --offline && vite build",
+    "build:live": "node scripts/generate-products.mjs && vite build",
     "preview": "vite preview",
     "lint": "oxlint",
     "start": "bash ../start.sh"
@@ -14,8 +16,6 @@
   "dependencies": {
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
-    "@tanstack/react-query": "^5.90.5",
-    "axios": "^1.12.2",
     "framer-motion": "^12.23.24",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -25,6 +25,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
+    "mongoose": "^8.20.1",
     "oxlint": "^1.23.0",
     "tailwindcss": "^4.1.14",
     "vite": "^7.1.9"

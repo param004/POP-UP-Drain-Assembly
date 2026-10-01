@@ -1,9 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { Canvas } from "@react-three/fiber";
 
-import { useCart } from "../../context/CartContext.jsx";
-import { useWishlist } from "../../context/WishlistContext.jsx";
 import DrainModel from "../three/DrainModel.jsx";
 import CameraRig from "../three/CameraRig.jsx";
 import StudioEnvironment from "../three/StudioEnvironment.jsx";
@@ -15,35 +13,12 @@ import StudioEnvironment from "../three/StudioEnvironment.jsx";
  * technical glyph. The brief's data set has no product photography, and a
  * hand-drawn silhouette is far more honest than a stock photo of a different
  * drain — the glyph is derived from the product's own category.
+ *
+ * The whole card is one link. It used to carry a wishlist heart and a quick-add
+ * button, but both needed the cart and account APIs, so on a static build the card
+ * is purely a way to reach the product page.
  */
-export default function ProductCard({ product, index = 0 }) {
-  const { addItem, pendingItem } = useCart();
-  const { ids, toggle } = useWishlist();
-  const navigate = useNavigate();
-  const [added, setAdded] = useState(false);
-
-  const wished = ids.has(String(product._id));
-  const busy = pendingItem === "new";
-
-  const onAdd = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    try {
-      await addItem(product._id, product.variants?.[0]?._id ?? null, 1);
-      setAdded(true);
-      setTimeout(() => setAdded(false), 1600);
-    } catch {
-      /* the cart context surfaces the message */
-    }
-  };
-
-  const onWish = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const result = await toggle(product._id);
-    if (result?.requiresAuth) navigate("/login", { state: { from: "/wishlist" } });
-  };
-
+export default function ProductCard({ product }) {
   return (
     <article className="group relative flex flex-col">
       <Link
@@ -58,40 +33,6 @@ export default function ProductCard({ product, index = 0 }) {
             {product.badge}
           </span>
         )}
-
-        <button
-          type="button"
-          onClick={onWish}
-          aria-label={wished ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`}
-          aria-pressed={wished}
-          className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-shell-50/85 text-ink-700 backdrop-blur-sm transition-all hover:bg-shell-50 hover:text-ink-900"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            width="15"
-            height="15"
-            fill={wished ? "currentColor" : "none"}
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M12 20s-7-4.4-7-9.2A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7 2.8C19 15.6 12 20 12 20z" />
-          </svg>
-        </button>
-
-        {/* Quick add, revealed on hover but always reachable by keyboard. */}
-        <div className="absolute inset-x-3 bottom-3 translate-y-2 opacity-0 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] focus-within:translate-y-0 focus-within:opacity-100 group-hover:translate-y-0 group-hover:opacity-100">
-          <button
-            type="button"
-            onClick={onAdd}
-            disabled={busy || product.stock < 1}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-ink-900 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-shell-100 transition-colors hover:bg-ink-800 disabled:opacity-50"
-          >
-            {added ? "Added" : product.stock < 1 ? "Sold out" : "Add to cart"}
-          </button>
-        </div>
       </Link>
 
       <div className="mt-4 flex items-start justify-between gap-4">

@@ -9,9 +9,10 @@ const COLUMNS = [
     links: [
       // The catalogue grid and its category filters were removed with the
       // listing page, so this column now goes straight to the product.
+      // Cart and wishlist went with the server that backed them.
       { label: "Drain assembly", to: SHOP_PATH },
-      { label: "Cart", to: "/cart" },
-      { label: "Wishlist", to: "/wishlist" },
+      { label: "Technical specs", to: `${SHOP_PATH}#specs` },
+      { label: "Materials", to: `${SHOP_PATH}#materials` },
     ],
   },
   {
@@ -27,8 +28,8 @@ const COLUMNS = [
     title: "Company",
     links: [
       { label: "About us", to: "/about" },
-      { label: "Your account", to: "/account" },
-      { label: "Admin", to: "/admin" },
+      { label: "Our story", to: "/about#story" },
+      { label: "Request a quote", to: "/contact" },
     ],
   },
 ];

@@ -1,10 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { useCart } from "../../context/CartContext.jsx";
-import { useWishlist } from "../../context/WishlistContext.jsx";
-import { useAuth } from "../../context/AuthContext.jsx";
 import { fetchProducts } from "../../api/endpoints.js";
 import { SHOP_PATH } from "../../data/paths.js";
 
@@ -22,11 +19,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const { count: cartCount } = useCart();
-  const { count: wishCount } = useWishlist();
-  const { isAuthenticated, isAdmin, user, logout } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const searchRef = useRef(null);
 
   // The header starts transparent over the hero and gains a ground once the page
@@ -107,40 +100,11 @@ export default function Navbar() {
               <SearchIcon />
             </IconButton>
 
-            {isAuthenticated ? (
-              <IconButton
-                label={`Wishlist, ${wishCount} item${wishCount === 1 ? "" : "s"}`}
-                to="/wishlist"
-                badge={wishCount}
-              >
-                <HeartIcon />
-              </IconButton>
-            ) : (
-              <IconButton label="Sign in" to="/login">
-                <UserIcon />
-              </IconButton>
-            )}
-
-            <IconButton
-              label={`Cart, ${cartCount} item${cartCount === 1 ? "" : "s"}`}
-              to="/cart"
-              badge={cartCount}
-            >
-              <BagIcon />
-            </IconButton>
-
-            {/* Account menu, only for signed-in users. */}
-            {isAuthenticated && (
-              <div className="relative hidden sm:block">
-                <button
-                  type="button"
-                  onClick={() => setMenuOpen((v) => !v)}
-                  className="ml-1 rounded-full border border-shell-300 px-3 py-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.14em] transition-colors hover:border-ink-900"
-                >
-                  {user?.name?.split(" ")[0] ?? "Account"}
-                </button>
-              </div>
-            )}
+            {/*
+              Search only, now. The cart, wishlist and account buttons went with the
+              server: there is nowhere for them to go on a static build, and a link
+              that 404s is worse than no link at all.
+            */}
 
             <button
               type="button"
@@ -230,50 +194,26 @@ export default function Navbar() {
               </div>
 
               <div className="mt-auto flex flex-col gap-3 border-t border-shell-200 p-7">
-                {isAuthenticated ? (
-                  <>
-                    <p className="text-sm text-ink-500">
-                      Signed in as <span className="font-medium text-ink-900">{user?.email}</span>
-                    </p>
-                    {isAdmin && (
-                      <Link
-                        to="/admin"
-                        onClick={() => setMenuOpen(false)}
-                        className="text-sm font-medium underline underline-offset-4"
-                      >
-                        Admin dashboard
-                      </Link>
-                    )}
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        await logout();
-                        setMenuOpen(false);
-                        navigate("/");
-                      }}
-                      className="self-start text-sm font-medium underline underline-offset-4"
-                    >
-                      Sign out
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      to="/login"
-                      onClick={() => setMenuOpen(false)}
-                      className="text-sm font-semibold uppercase tracking-[0.14em]"
-                    >
-                      Sign in
-                    </Link>
-                    <Link
-                      to="/register"
-                      onClick={() => setMenuOpen(false)}
-                      className="text-sm font-medium text-ink-500 underline underline-offset-4"
-                    >
-                      Create an account
-                    </Link>
-                  </>
-                )}
+                {/*
+                  Was the sign-in / register / sign-out block. There are no accounts
+                  on a static build, so this now offers the enquiry route instead —
+                  the only thing a visitor can actually do here.
+                */}
+                <p className="text-sm text-ink-500">Interested in the range?</p>
+                <Link
+                  to="/contact"
+                  onClick={() => setMenuOpen(false)}
+                  className="self-start text-sm font-semibold uppercase tracking-[0.14em]"
+                >
+                  Contact us
+                </Link>
+                <Link
+                  to={SHOP_PATH}
+                  onClick={() => setMenuOpen(false)}
+                  className="self-start text-sm font-medium text-ink-500 underline underline-offset-4"
+                >
+                  See the drain assembly
+                </Link>
               </div>
             </motion.nav>
           </>
@@ -318,27 +258,26 @@ function IconButton({ label, badge, to, active, onClick, children }) {
   );
 }
 
-/** Debounced product search backed by the products endpoint. */
+/**
+ * Product search.
+ *
+ * Was a debounced request to the products endpoint. The catalogue now lives in the
+ * bundle, so this filters an array in memory — no debounce needed, because with six
+ * products the work is smaller than the keystroke that triggered it.
+ */
 function SearchPanel({ inputRef, onNavigate }) {
   const [term, setTerm] = useState("");
-  const [results, setResults] = useState([]);
-  const [searching, setSearching] = useState(false);
 
-  useEffect(() => {
-    if (term.trim().length < 2) {
-      setResults([]);
-      return;
-    }
-
-    setSearching(true);
-    const handle = setTimeout(() => {
-      fetchProducts({ search: term.trim(), limit: 5 })
-        .then((data) => setResults(data.items))
-        .catch(() => setResults([]))
-        .finally(() => setSearching(false));
-    }, 250);
-
-    return () => clearTimeout(handle);
+  const results = useMemo(() => {
+    const q = term.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return fetchProducts()
+      .filter((p) =>
+        [p.name, p.tagline, p.category, p.material, p.description]
+          .filter(Boolean)
+          .some((field) => field.toLowerCase().includes(q))
+      )
+      .slice(0, 5);
   }, [term]);
 
   return (
@@ -354,13 +293,12 @@ function SearchPanel({ inputRef, onNavigate }) {
       />
 
       <div className="mt-4">
-        {searching && <p className="text-sm text-ink-400">Searching…</p>}
-        {!searching && term.trim().length >= 2 && results.length === 0 && (
+        {term.trim().length >= 2 && results.length === 0 && (
           <p className="text-sm text-ink-400">No products match “{term}”.</p>
         )}
         <ul className="divide-y divide-shell-200">
           {results.map((p) => (
-            <li key={p._id}>
+            <li key={p.slug}>
               <Link
                 to={`/products/${p.slug}`}
                 onClick={onNavigate}
