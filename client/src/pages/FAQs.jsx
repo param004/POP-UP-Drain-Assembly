@@ -7,7 +7,7 @@ import { FAQS } from "../data/content.js";
 /** The anchored sections of this page. The sidebar jump links render from this. */
 const FAQ_SECTIONS = [
   { id: "faq", label: "All questions" },
-  { id: "shipping", label: "Shipping & returns" },
+  { id: "shipping", label: "Ordering & delivery" },
   { id: "warranty", label: "Warranty" },
 ];
 
@@ -17,7 +17,7 @@ export default function FAQs() {
       <PageHeader
         eyebrow="questions"
         title="FAQs"
-        lede="The things people ask before they buy. If yours is not here, the contact form goes to a person who will answer it."
+        lede="The things people ask before they buy. If yours is not here, the contact form composes an email to a person who will answer it."
       />
 
       <div className="mx-auto max-w-[1400px] px-5 py-14 sm:px-8 sm:py-20">
@@ -52,12 +52,12 @@ export default function FAQs() {
               id="shipping"
               className="mt-14 scroll-mt-24 rounded-xl border border-shell-300 bg-shell-50 p-8"
             >
-              <h2 className="text-lg font-semibold tracking-tight">Shipping &amp; returns</h2>
+              <h2 className="text-lg font-semibold tracking-tight">Ordering</h2>
               <p className="mt-2 max-w-prose text-sm leading-relaxed text-ink-500">
-                This is a demonstration catalogue, so there is no fulfilment pipeline behind
-                it. Terms, lead times and the returns window are placeholders and need
-                replacing before any real order is taken — see the README for the other
-                invented content.
+                There is no checkout on this site, so nothing can be ordered through it. Email or
+                call us and we will quote you directly, with shipping and fitment advice for your
+                basin. Lead times, shipping thresholds and returns windows are not published here
+                because they are not settled — see the README for the other placeholder content.
               </p>
             </section>
 

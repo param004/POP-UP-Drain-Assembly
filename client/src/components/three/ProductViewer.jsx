@@ -240,8 +240,8 @@ export default function ProductViewer({
           )}
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Button to={`/products/${product.slug}`} variant="solid" size="md" withArrow>
-              Shop Now
+            <Button to="/contact" variant="solid" size="md" withArrow>
+              Enquire
             </Button>
             <Button
               type="button"

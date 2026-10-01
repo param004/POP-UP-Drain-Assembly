@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import NewsletterForm from "./NewsletterForm.jsx";
 import ContactStrip from "./ContactStrip.jsx";
 import { SHOP_PATH } from "../../data/paths.js";
 
@@ -20,7 +19,7 @@ const COLUMNS = [
     links: [
       { label: "FAQs", to: "/faqs" },
       { label: "Contact us", to: "/contact" },
-      { label: "Shipping & returns", to: "/faqs#shipping" },
+      { label: "Ordering & delivery", to: "/faqs#shipping" },
       { label: "Warranty", to: "/faqs#warranty" },
     ],
   },
@@ -53,9 +52,12 @@ export default function Footer() {
               Brass-bodied, chrome-finished drain hardware. One pivot, no linkage, nothing to
               adjust.
             </p>
-            <div className="mt-6 max-w-sm">
-              <NewsletterForm />
-            </div>
+            {/*
+              The newsletter signup was removed along with the other capture forms.
+              It validated the address and confirmed locally while storing nothing,
+              which told visitors their email had been saved when it had not. The
+              contact strip above is the one path to reach the business, and it works.
+            */}
           </div>
 
           {COLUMNS.map((col) => (

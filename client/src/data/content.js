@@ -23,8 +23,8 @@ export const FAQS = [
   },
   {
     id: "shipping",
-    q: "Shipping and returns",
-    a: "Orders ship within 1–2 business days and free shipping applies over $150. Returns are accepted for 30 days in unused original packaging. If a drain fails in normal use inside its warranty period, we replace it — see the warranty section below.",
+    q: "How do I order?",
+    a: "This site is a product showcase and cannot take orders — there is no checkout behind it. To buy, email or call us and we will quote you directly, including shipping and fitment advice for your basin.",
   },
   {
     q: "Is it dishwasher safe?",
@@ -33,7 +33,7 @@ export const FAQS = [
   {
     id: "warranty",
     q: "What is the warranty?",
-    a: "Five years on the mechanism, covering the pivot collar, shaft and cap against mechanical failure in normal domestic use. Finish is warranted separately for two years, and gaskets for one year. Damage from installers, solvents or misuse is not covered. The warranty is a placeholder pending confirmation of the final terms.",
+    a: "The intended cover is five years on the mechanism — pivot collar, shaft and cap — against mechanical failure in normal domestic use, with two years on the finish and one on the gaskets. Those numbers are placeholders, not published terms: ask us for the current warranty in writing before ordering.",
   },
   {
     q: "Does the cap get scratched easily?",

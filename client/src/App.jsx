@@ -3,7 +3,6 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import Navbar from "./components/layout/Navbar.jsx";
 import Footer from "./components/layout/Footer.jsx";
-import ChatBubble from "./components/layout/ChatBubble.jsx";
 import Spinner from "./components/ui/Feedback.jsx";
 import ScrollToTop from "./components/layout/ScrollToTop.jsx";
 import { SHOP_PATH } from "./data/paths.js";
@@ -59,7 +58,6 @@ export default function App() {
       </main>
 
       <Footer />
-      <ChatBubble />
     </div>
   );
 }
