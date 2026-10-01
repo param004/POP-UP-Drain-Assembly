@@ -10,14 +10,9 @@
 [build.processing]
   skip_processing = false
 
-# This is a single-page app: every route is resolved by react-router in the
-# browser, so a hard refresh or a shared deep link like /products/pop-up-drain
-# must fall through to index.html rather than 404. Without this, Netlify returns
-# its own 404 page for anything that isn't a real file in dist/.
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# The SPA fallback lives in client/public/_redirects, not here. Vite copies
+# public/ verbatim into dist/, so it ships as dist/_redirects. Keep it in one
+# place only — a second [[redirects]] block here would duplicate the rule.
 
 # Long-lived caching for the hashed bundles under /assets/. The filenames
 # contain a content hash, so they are safe to cache forever.

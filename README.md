@@ -98,17 +98,15 @@ from the repo root, so there is nothing to fill in by hand:
 
 No environment variables are required. The build is fully offline.
 
-**2. Enable the SPA redirect.** `netlify.toml` already contains:
+**2. SPA routing.** The fallback rule is committed at `client/public/_redirects`:
 
-```toml
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+```
+/* /index.html 200
 ```
 
-Without this, a hard refresh or a shared deep link like `/products/pop-up-drain`
-returns Netlify's 404 page, because that path is not a file in `dist/`.
+Vite copies `public/` verbatim into `dist/`, so it deploys as `dist/_redirects`.
+Without it, a hard refresh or a shared deep link like `/products/pop-up-drain` returns
+Netlify's 404 page, because that path is not a file in `dist/`.
 
 **3. Verify a deployment:**
 
