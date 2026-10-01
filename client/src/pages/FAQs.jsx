@@ -4,6 +4,13 @@ import Button from "../components/ui/Button.jsx";
 import Reveal from "../components/ui/Reveal.jsx";
 import { FAQS } from "../data/content.js";
 
+/** The anchored sections of this page. The sidebar jump links render from this. */
+const FAQ_SECTIONS = [
+  { id: "faq", label: "All questions" },
+  { id: "shipping", label: "Shipping & returns" },
+  { id: "warranty", label: "Warranty" },
+];
+
 export default function FAQs() {
   return (
     <div className="pt-16 sm:pt-[4.5rem]">
@@ -15,25 +22,21 @@ export default function FAQs() {
 
       <div className="mx-auto max-w-[1400px] px-5 py-14 sm:px-8 sm:py-20">
         <div className="grid gap-12 lg:grid-cols-[16rem_1fr] lg:gap-20">
-          {/* Jump links, which double as the anchors the footer links to. */}
+          {/*
+            Jump links, which double as the anchors the footer links to. These are
+            built from the section ids below rather than written out by hand, so
+            the list cannot drift out of sync with the sections it points at.
+          */}
           <nav className="lg:sticky lg:top-24 lg:self-start" aria-label="FAQ sections">
             <p className="eyebrow">Jump to</p>
             <ul className="mt-4 space-y-2 text-sm">
-              <li>
-                <a href="#faq" className="text-ink-500 hover:text-ink-900">
-                  All questions
-                </a>
-              </li>
-              <li>
-                <a href="#shipping" className="text-ink-500 hover:text-ink-900">
-                  Shipping &amp; returns
-                </a>
-              </li>
-              <li>
-                <a href="#warranty" className="text-ink-500 hover:text-ink-900">
-                  Warranty
-                </a>
-              </li>
+              {FAQ_SECTIONS.map((s) => (
+                <li key={s.id}>
+                  <a href={`#${s.id}`} className="text-ink-500 hover:text-ink-900">
+                    {s.label}
+                  </a>
+                </li>
+              ))}
             </ul>
             <Button to="/contact" variant="outline" size="sm" withArrow className="mt-7">
               Ask a question
@@ -45,7 +48,32 @@ export default function FAQs() {
               <Accordion items={FAQS} defaultOpen={0} allowMultiple />
             </Reveal>
 
-            <div className="mt-14 rounded-xl border border-shell-300 bg-shell-50 p-8 text-center">
+            <section
+              id="shipping"
+              className="mt-14 scroll-mt-24 rounded-xl border border-shell-300 bg-shell-50 p-8"
+            >
+              <h2 className="text-lg font-semibold tracking-tight">Shipping &amp; returns</h2>
+              <p className="mt-2 max-w-prose text-sm leading-relaxed text-ink-500">
+                This is a demonstration catalogue, so there is no fulfilment pipeline behind
+                it. Terms, lead times and the returns window are placeholders and need
+                replacing before any real order is taken — see the README for the other
+                invented content.
+              </p>
+            </section>
+
+            <section
+              id="warranty"
+              className="mt-4 scroll-mt-24 rounded-xl border border-shell-300 bg-shell-50 p-8"
+            >
+              <h2 className="text-lg font-semibold tracking-tight">Warranty</h2>
+              <p className="mt-2 max-w-prose text-sm leading-relaxed text-ink-500">
+                The stated cover (five years on the mechanism, two on the finish, one on the
+                gasket) is placeholder copy, not a real warranty. Replace it with the actual
+                terms, and with the jurisdiction and claim procedure, before publishing.
+              </p>
+            </section>
+
+            <div className="mt-8 rounded-xl border border-shell-300 bg-shell-50 p-8 text-center">
               <h2 className="text-lg font-semibold tracking-tight">Still not answered?</h2>
               <p className="mx-auto mt-2 max-w-sm text-sm text-ink-500">
                 Send us the basin type and the cut-out measurement and we will tell you exactly

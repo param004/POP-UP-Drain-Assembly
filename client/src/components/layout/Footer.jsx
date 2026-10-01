@@ -11,8 +11,8 @@ const COLUMNS = [
       // listing page, so this column now goes straight to the product.
       // Cart and wishlist went with the server that backed them.
       { label: "Drain assembly", to: SHOP_PATH },
-      { label: "Technical specs", to: `${SHOP_PATH}#specs` },
-      { label: "Materials", to: `${SHOP_PATH}#materials` },
+      { label: "Interactive 3D", to: "/#explorer" },
+      { label: "Cross-section view", to: SHOP_PATH },
     ],
   },
   {
@@ -28,7 +28,7 @@ const COLUMNS = [
     title: "Company",
     links: [
       { label: "About us", to: "/about" },
-      { label: "Our story", to: "/about#story" },
+      { label: "Product features", to: "/#features" },
       { label: "Request a quote", to: "/contact" },
     ],
   },
