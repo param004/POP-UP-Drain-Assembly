@@ -79,6 +79,59 @@ NODE_ENV=production npm start   # http://localhost:4000
 > Port `5000` is unusable on stock macOS — AirPlay Receiver already owns it. The API
 > defaults to `4000` for that reason.
 
+### Deploying to Railway
+
+The app is a single Node process that serves both the API and the built client, so it
+deploys as one service. `railway.json` in the repo root carries the build and start
+commands, so the only manual work is the environment variables.
+
+**1. Create the project.** [railway.app](https://railway.app/) → **New Project** →
+**Deploy from GitHub repo** → pick this repository.
+
+**2. Set the root directory.** Railway service → **Settings** → **Root Directory** =
+`server`. This keeps dotenv resolving from `server/` and preserves the
+`../client/dist` relationship that `findClientDist()` walks upwards to find.
+
+**3. Environment variables.** Service → **Variables** → paste raw values, no quotes,
+no `export`:
+
+| Variable | Value |
+| --- | --- |
+| `MONGODB_URI` | `mongodb+srv://<user>:<password>@<cluster>.mongodb.net/pop-up-drain?appName=<cluster>` |
+| `JWT_SECRET` | `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
+| `NODE_ENV` | `production` |
+| `CLIENT_URL` | `*` while the domain is unknown, then the real origin (see below) |
+| `SEED_ADMIN_EMAIL` | admin email of your choice |
+| `SEED_ADMIN_PASSWORD` | admin password of your choice |
+
+Do **not** set `PORT` — Railway injects it and `server.js` already reads
+`process.env.PORT`. Do **not** set `VITE_API_URL`: the client and API share an origin,
+so the relative `/api` default is correct, and a cross-origin API would be blocked by
+this app's own CSP (`connectSrc: ["'self'"]`).
+
+**4. Atlas IP allowlist.** If connection attempts time out, the deploy host's outbound
+IP is not in Atlas → **Network Access** → **IP Access List**. Add `0.0.0.0/0` for a
+deployed app.
+
+**5. Deploy, then tighten CORS.** With `CLIENT_URL=*` any origin is allowed. Once the
+domain is known, set `CLIENT_URL=https://<your-domain>` and redeploy. Same-origin
+deployment does not rely on CORS at all, so this only matters for defence in depth.
+
+> **Never run `npm run seed` against production.** It calls `Product.deleteMany({})`
+> and wipes the catalogue. It is not part of the build or start command. `connectDB()`
+> retries with backoff (5 attempts, 20s each) so a cold database start does not crash
+> the process; a genuinely wrong URI still fails fast with a clear message.
+
+**Verify a deployment:**
+
+```bash
+BASE=https://<your-domain>
+curl -s $BASE/api/health            # {"status":"ok",...}
+curl -s -o /dev/null -w '%{http_code}\n' $BASE/models/pop_up_drain_final_animation.glb
+```
+
+The GLB is the asset most likely to fail silently, so check it explicitly.
+
 ---
 
 ## The scroll narrative
